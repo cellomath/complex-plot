@@ -327,7 +327,7 @@ function showcoordinates(e) {
 
     var graph_mouse = map_mouse_to_zgraph(mouse);
     var graph_mapped_mouse = mapping(graph_mouse);
-    $('debug').innerHTML="{"+graph_mouse.x.toPrecision(5)+","+graph_mouse.y.toPrecision(5)+"} maps to {"+graph_mapped_mouse.x.toPrecision(5)+","+graph_mapped_mouse.y.toPrecision(5)+"}"+previously_pointer;
+    $('debug').innerHTML="{"+graph_mouse.x.toPrecision(5)+","+graph_mouse.y.toPrecision(5)+"} maps to {"+graph_mapped_mouse.x.toPrecision(5)+","+graph_mapped_mouse.y.toPrecision(5)+"}";
 
     if($('drawmode').value === 'pointer'){
         if(!previously_pointer){
