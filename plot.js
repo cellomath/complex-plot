@@ -46,7 +46,7 @@ function floatToString(x){
     var trunc;
     var exponent = x.search('[eE]');
     if(exponent<0){
-        trunc = x.length-1
+        trunc = x.length-1;
         while(x[trunc]==='0'){
             trunc--;
         }
@@ -98,14 +98,14 @@ function store_graph_images(){
 }
 
 function load_graph_images(){
-    set_draw_settings('fillStyle','#ffffff')
+    set_draw_settings('fillStyle','#ffffff');
     zgraph_canvas.fillRect(0, 0, zgraph.width, zgraph.height);
     wgraph_canvas.fillRect(0, 0, wgraph.width, wgraph.height);
     zgraph_canvas.drawImage(zgraph_off,0,0);
     wgraph_canvas.drawImage(wgraph_off,0,0);
 }
 
-var all_strokes = []
+var all_strokes = [];
 var stroke = {}
 
 function resize_graphs(redraw = true){
@@ -149,7 +149,7 @@ function draw_axes(){
                maxu-minu, maxv-minv];
 
     function scale_properly(x){
-        x = Math.log10(x)
+        x = Math.log10(x);
         const mod = ((x%1)+1)%1;
         var scale;
         if(mod < 1.0/6){
@@ -340,7 +340,7 @@ function showcoordinates(e) {
         previously_pointer = true;
     } else if(previously_pointer){
         load_graph_images();
-        previously_pointer = false
+        previously_pointer = false;
     }
 }
 zgraph.addEventListener('mousemove', showcoordinates, false);
@@ -441,7 +441,7 @@ function drawPointer(mouse){
     wgraph_canvas.arc(...coords, 2, 0, 2*Math.PI);
     wgraph_canvas.arc(...coords, 5, 0, 2*Math.PI);
     wgraph_canvas.arc(...coords, 10, 0, 2*Math.PI);
-    wgraph_canvas.stroke()
+    wgraph_canvas.stroke();
 }
 
 function onPaint(e) {
@@ -451,7 +451,7 @@ function onPaint(e) {
     var mouse = new Coords(e.pageX - zgraph.offsetLeft, e.pageY - zgraph.offsetTop).multiply(device_pixel_ratio);
     var mode = all_strokes[all_strokes.length-1].mode;
     if(mode === 'freedraw'){
-        all_strokes[all_strokes.length-1].path.push(canvas_to_graph_coords(mouse, zgraph, zbd))
+        all_strokes[all_strokes.length-1].path.push(canvas_to_graph_coords(mouse, zgraph, zbd));
         zgraph_canvas.lineTo(mouse.x, mouse.y);
         zgraph_canvas.stroke();
         var coords = map_mouse_to_wgraph(mouse);
@@ -469,13 +469,13 @@ function onPaint(e) {
     }
 }
 function redraw_graphs(){
-    set_draw_settings('fillStyle','#ffffff')
+    set_draw_settings('fillStyle','#ffffff');
     zgraph_canvas.fillRect(0, 0, zgraph.width, zgraph.height);
     wgraph_canvas.fillRect(0, 0, wgraph.width, wgraph.height);
     zgraph_canvas_off.fillRect(0, 0, zgraph.width, zgraph.height);
     wgraph_canvas_off.fillRect(0, 0, wgraph.width, wgraph.height);
 
-    set_draw_settings('fillStyle','#000000')
+    set_draw_settings('fillStyle','#000000');
 
     set_draw_settings('strokeCap', 'round');
     set_draw_settings('strokeStyle', '#000000');
@@ -517,7 +517,7 @@ function check_function(){
 
 var popped_strokes = [];
 function KeyPress(e) {
-    var e = window.event ? window.event : e
+    var e = window.event ? window.event : e;
     if ((e.code === "KeyZ") && e.ctrlKey){
         if (all_strokes.length>0){
             popped_strokes.push(all_strokes.pop());
@@ -536,7 +536,7 @@ function KeyPress(e) {
 
 window.addEventListener('keydown', KeyPress);
 window.addEventListener('resize', resize_graphs);
-onchange="myFunction()"
+onchange="myFunction()";
 for(i of document.getElementsByClassName('bound')){
     i.addEventListener('change',function(e){
         update_bounds();
