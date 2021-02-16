@@ -1,5 +1,5 @@
 function $(s){return document.getElementById(s);}
-const device_pixel_ratio = window.devicePixelRatio;
+var device_pixel_ratio = window.devicePixelRatio;
 
 class Coords{
     constructor(x, y=null){
@@ -37,6 +37,18 @@ class Coords{
         return new Coords(this.x/b, this.y/b);
     }
 }
+
+class OffscreenGraph{
+    constructor(){
+        this.graph = document.createElement('canvas');
+        this.graph_canvas = this.graph.getContext('2d');
+        this.strokes = [];
+
+    }
+
+}
+var CanvasBanks = {};
+
 
 function floatToString(x){
     x = x.toPrecision(5);
@@ -109,10 +121,14 @@ var all_strokes = [];
 var stroke = {}
 
 function resize_graphs(redraw = true){
+    console.log("redraw")
+    device_pixel_ratio = window.devicePixelRatio;
     update_bounds();
+
     zgraph_off.width  = zgraph.width  = device_pixel_ratio*parseInt(getComputedStyle(zgraph).getPropertyValue('width'));
     zgraph_off.height = zgraph.height = device_pixel_ratio*parseInt(getComputedStyle(zgraph).getPropertyValue('height'));
-
+    console.log(window.width)
+    console.log(window.height)
     wgraph_off.width  = wgraph.width  = device_pixel_ratio*parseInt(getComputedStyle(wgraph).getPropertyValue('width'));
     wgraph_off.height = wgraph.height = device_pixel_ratio*parseInt(getComputedStyle(wgraph).getPropertyValue('height'));
     if(redraw){redraw_graphs();}
@@ -145,41 +161,58 @@ function draw_axes(){
     var maxu = parseFloat($('maxu').value);  var minu = parseFloat($('minu').value);
     var maxv = parseFloat($('maxv').value);  var minv = parseFloat($('minv').value);
 
-    var dim = [maxx-minx, maxy-miny,
-               maxu-minu, maxv-minv];
+    // var dim = [maxx-minx, maxy-miny,
+    //            maxu-minu, maxv-minv];
 
-    function scale_properly(x){
-        x = Math.log10(x);
-        const mod = ((x%1)+1)%1;
-        var scale;
-        if(mod < 1.0/6){
-            scale = 1;
-            if(mod == 0){
-                x++;
+    var dim = [...canvas_to_graph_coords(new Coords(75,75).multiply(device_pixel_ratio),zgraph,zbd),
+               ...canvas_to_graph_coords(new Coords(75,75).multiply(device_pixel_ratio),wgraph,wbd)];
+    dim[0] = Math.abs(dim[0]-minx);
+    dim[1] = Math.abs(dim[1]-maxy);
+    dim[2] = Math.abs(dim[2]-minu);
+    dim[3] = Math.abs(dim[3]-maxv);
+    for(let i = 0; i < 4; i++){
+        let m = Math.pow(10,Math.floor(Math.log10(dim[i])));
+        if(5*m > dim[i]){
+            if(2*m < dim[i]){
+                m *=2;
             }
+        } else {
+            m *= 5;
         }
-        else if(mod > 5.0/6){
-            x++;
-            scale = 1;
-        }
-        else if(mod < 3.0/6){
-            scale = 2;
-        }
-        else{
-            scale = 5;
-        }
-        return scale*Math.pow(10, Math.ceil(x-2));
+        dim[i] = m;
     }
 
-    for(let i = 0; i<4; i++){
-        dim[i] = scale_properly(dim[i]);
-    }
+    // function scale_properly(x){
+    //     x = Math.log10(x);
+    //     const mod = ((x%1)+1)%1;
+    //     var scale;
+    //     if(mod < 1.0/6){
+    //         scale = 1;
+    //         if(mod == 0){
+    //             x++;
+    //         }
+    //     }
+    //     else if(mod > 5.0/6){
+    //         x++;
+    //         scale = 1;
+    //     }
+    //     else if(mod < 3.0/6){
+    //         scale = 2;
+    //     }
+    //     else{
+    //         scale = 5;
+    //     }
+    //     return scale*Math.pow(10, Math.ceil(x-2));
+    // }
 
-    tick_center = [(maxx+minx)/2, (maxy+miny)/2,
-                   (maxu+minu)/2, (maxv+minv)/2];
+    // for(let i = 0; i<4; i++){
+    //     dim[i] = scale_properly(dim[i]);
+    // }
+
+    tick_edge = [minx, miny, minu, minv];
 
     for(let i = 0; i<4; i++){
-        tick_center[i] = Math.round(tick_center[i]/dim[i])*dim[i];
+        tick_edge[i] = Math.floor(tick_edge[i]/dim[i])*dim[i];
     }
 
     var minmax = (min, val, max) => Math.min(Math.max(min, val), max);
@@ -219,10 +252,11 @@ function draw_axes(){
 
     set_draw_settings('font',(16*device_pixel_ratio)+"px Times New Roman");// Arial";
     zgraph_canvas.beginPath();       wgraph_canvas.beginPath();
-    for(let i = -10; i<10; i++){
-        var point = new Coords(tick_center[0]+i*dim[0],tick_center[1]+i*dim[1]);
-        var coord = graph_to_canvas_coords(point,zgraph,zbd);
-        if(coord.x>=0 && coord.x < zgraph.width){
+    var point, coord, i = 0;
+    do{
+        point = new Coords(tick_edge[0]+i*dim[0],tick_edge[1]+i*dim[1]);
+        coord = graph_to_canvas_coords(point,zgraph,zbd);
+        if(coord.x <= zgraph.width){
             zgraph_canvas.textAlign = 'center';
             if(text_pos_top_right[0]){
                 //y values are below
@@ -236,7 +270,7 @@ function draw_axes(){
         zgraph_canvas.moveTo(coord.x,origin_z.y-tick_radius);
         zgraph_canvas.lineTo(coord.x,origin_z.y+tick_radius);
 
-        if(coord.y>=0 && coord.y < zgraph.height){
+        if(coord.y >= 0){
             zgraph_canvas.textBaseline = "middle";
             if(text_pos_top_right[1]){
                 zgraph_canvas.textAlign = 'start';
@@ -249,8 +283,12 @@ function draw_axes(){
         zgraph_canvas.moveTo(origin_z.x-tick_radius,coord.y);
         zgraph_canvas.lineTo(origin_z.x+tick_radius,coord.y);
 
+        i++;
+    } while(coord.x <= zgraph.width || coord.y >= 0);
 
-        point = new Coords(tick_center[2]+i*dim[2],tick_center[3]+i*dim[3]);
+    i=0;
+    do{
+        point = new Coords(tick_edge[2]+i*dim[2],tick_edge[3]+i*dim[3]);
         coord = graph_to_canvas_coords(point,wgraph,wbd);
         if(coord.x>=0 && coord.x < wgraph.width){
             wgraph_canvas.textAlign = 'center';
@@ -278,9 +316,10 @@ function draw_axes(){
         }
         wgraph_canvas.moveTo(origin_w.x-tick_radius,coord.y);
         wgraph_canvas.lineTo(origin_w.x+tick_radius,coord.y);
-    }
-    zgraph_canvas.stroke();       wgraph_canvas.stroke();
 
+        i++;
+    } while(coord.x <= zgraph.width || coord.y >= 0);
+    zgraph_canvas.stroke();       wgraph_canvas.stroke();
 }
 
 function toggleAxes(){
@@ -323,11 +362,12 @@ function zoom(xmin_e, xmax_e, ymin_e, ymax_e, amount){
 
 var previously_pointer = false;
 function showcoordinates(e) {
-    var mouse = new Coords(e.pageX - zgraph.offsetLeft, e.pageY - zgraph.offsetTop).multiply(device_pixel_ratio);
+    var rect = e.target.getBoundingClientRect();
+    var mouse = new Coords(e.clientX - rect.left, e.clientY - rect.top).multiply(device_pixel_ratio);
 
     var graph_mouse = map_mouse_to_zgraph(mouse);
     var graph_mapped_mouse = mapping(graph_mouse);
-    $('debug').innerHTML="{"+graph_mouse.x.toPrecision(5)+","+graph_mouse.y.toPrecision(5)+"} maps to {"+graph_mapped_mouse.x.toPrecision(5)+","+graph_mapped_mouse.y.toPrecision(5)+"}";
+    $('debug').innerHTML="{"+graph_mouse.x.toPrecision(5)+","+graph_mouse.y.toPrecision(5)+"} is {" + mouse.x + " , " + mouse.y + "} and maps to {"+graph_mapped_mouse.x.toPrecision(5)+","+graph_mapped_mouse.y.toPrecision(5)+"}";
 
     if($('drawmode').value === 'pointer'){
         if(!previously_pointer){
@@ -352,8 +392,8 @@ function start_draw(e){
         return;
     }
     load_graph_images();
-    var mouse = new Coords(e.pageX - zgraph.offsetLeft, e.pageY - zgraph.offsetTop).multiply(device_pixel_ratio);
-    //add a new stroke
+    var rect = e.target.getBoundingClientRect();
+    var mouse = new Coords(e.clientX - rect.left, e.clientY - rect.top).multiply(device_pixel_ratio);    //add a new stroke
     var color = $('color_select').value;
     set_draw_settings('strokeStyle', color);
     if(mode !== 'pointer'){
@@ -448,7 +488,8 @@ function onPaint(e) {
     if($('drawmode').value === 'pointer'){
         return;
     }
-    var mouse = new Coords(e.pageX - zgraph.offsetLeft, e.pageY - zgraph.offsetTop).multiply(device_pixel_ratio);
+    var rect = e.target.getBoundingClientRect();
+    var mouse = new Coords(e.clientX - rect.left, e.clientY - rect.top).multiply(device_pixel_ratio);
     var mode = all_strokes[all_strokes.length-1].mode;
     if(mode === 'freedraw'){
         all_strokes[all_strokes.length-1].path.push(canvas_to_graph_coords(mouse, zgraph, zbd));
